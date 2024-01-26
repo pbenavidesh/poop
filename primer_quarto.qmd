@@ -1,0 +1,151 @@
+---
+title: "Mi primer documento Quarto"
+author: "PBH"
+date-modified: today
+embed-resources: true
+format: 
+  html:
+    theme:
+      light: minty
+      dark: darkly
+toc: true
+df-print: paged
+---
+
+
+
+En los documentos de Quarto se utiliza **markdown** para la elaboración del texto.
+
+:::{.callout-note collapse="true"}
+## Encabezado YAML
+Al inicio viene el encabezado del documento. No se puede eliminar, pero sí modificar. El código ahí no es código de R, sino YAML. Es importante respetar la indentación y los espacios.
+
+#### Visualización del editor
+
+RStudio permite trabajar los documentos de Quarto desde el código fuente; `Source`, o utilizando el editor visual; `Visual`. El último es similar a los softwares WYSIWYG *(What You See is What You Get)*, como Word, PowerPoint, etc. Pueden utilizar el que más les guste.
+
+:::
+
+## pkgs
+
+Es conveniente cargar *(importar)* las librerías al inicio del documento.
+
+:::{.callout-tip collapse="true"}
+## Algunos atajos del teclado
+Se puede utilizar el atajo del teclado: `CTRL + ALT + I` para agregar nuevos `chunks` de código.
+
+-   `CTRL/CMD + SHIFT + ENTER` corre todo un chunk completo.
+
+-   `CTRL/CMD + ENTER` corre la línea o selección actual.
+
+:::
+
+```{r}
+#| message: false
+#| warning: false
+library(tidyverse)
+library(fpp3)
+library(plotly)
+```
+
+## Acciones
+
+:::{.callout-note collapse="true"}
+## `tsibble`
+
+Las `tsibbles` son data frames (`tibbles` para series de tiempo. Las `tibbles` son los data frames utilizados en todo el `tidyverse`). Tienen dos argumentos característicos para series de tiempo, a diferencia de una `tibble` tradicional:
+
+- **index**: una columna que contiene a la variable temporal. En este caso es la columna `Date`.
+- **key**: no es obligatorio cuando solo tiene una serie de tiempo. Si la tabla contiene más de una serie de tiempo (en filas), sí es obligatorio definir el `key`.
+
+:::
+
+La tabla `gafa_stock` (de la paquetería `tsibbledata`, importada al cargar `fpp3` al inicio), contiene información de cuatro acciones:
+
+```{r}
+gafa_stock
+
+gafa_stock |> # pipe
+  distinct(Symbol)
+```
+
+
+:::{.callout-important}
+`|>` Es un "pipe". El atajo del teclado es `CTRL + SHIFT + M`. Se lee como **"luego"**. Es una función disponible en **R** que nos puede ayudar a simplificar el código bastante.
+:::
+
+Nos sirve para modificar código que tradicionalmente se escribiría algo como:
+
+```{r}
+pivot_wider(
+  summarise(
+    group_by(
+      as_tibble(
+        pivot_longer(
+          gafa_stock, 
+          cols = -c(Symbol, Date), 
+          names_to = "tipo", values_to = "valor")),
+      Symbol,tipo),
+    media = mean(valor),
+    .groups = "drop"),
+  names_from = tipo, 
+  values_from = media)
+```
+
+En este tipo de escritura, el código se lee de "adentro hacia afuera". Cuando el flujo se vuelve más complejo, entender el código y encontrar errores se vuelve más complicado.
+
+:::{.callout-tip appearance="simple"}
+El atajo del teclado para escribir ` |> ` es `CTRL/CMD + SHIFT + M`.
+:::
+
+Utilizando el flujo del *pipe*, el código anterior quedaría de la siguiente forma:
+
+```{r}
+gafa_stock |> 
+  # pasar las columnas a filas
+  pivot_longer(cols = -c(Symbol, Date), names_to = "tipo", values_to = "valor") |> 
+  # convertir a tibble
+  as_tibble() |> 
+  # agrupar por accion y tipo de var.
+  group_by(Symbol, tipo) |> 
+  # sacar la media por grupos
+  summarise(media = mean(valor), .groups = "drop") |> 
+  # pasar los tipos a columnas
+  pivot_wider(names_from = Symbol, values_from = media)
+```
+
+
+
+
+```{r}
+g1 <- gafa_stock |> 
+  autoplot(Close) +
+  facet_wrap(~ Symbol, scales = "free_y") +
+  theme(legend.position = "none")
+g1
+
+ggplotly(g1)
+```
+
+```{r}
+gafa_stock |> 
+  select(-Volume) |>
+  pivot_longer(cols = -c(Symbol, Date), names_to = "tipo", values_to = "valor") |> 
+  autoplot(valor) +
+  facet_grid(Symbol ~ tipo, scales = "free_y") +
+  theme(legend.position = "none")
+```
+
+```{r}
+aus_production |> 
+  autoplot(Gas)
+```
+
+- **Heterocedasticidad**: Varianza desigual en el tiempo.
+
+- **Homocedasticidad**: Varianza constante en el tiempo.
+
+```{r}
+plot(JohnsonJohnson)
+```
+
