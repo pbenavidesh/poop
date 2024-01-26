@@ -3,6 +3,7 @@
 .RData
 .Ruserdata
 *.Rproj
+*.html
 
 # Created by https://www.toptal.com/developers/gitignore/api/r,python,windows,macos
 # Edit at https://www.toptal.com/developers/gitignore?templates=r,python,windows,macos
