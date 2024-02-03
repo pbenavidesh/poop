@@ -1,0 +1,62 @@
+---
+title: "Time Series Decomposition"
+author: "PBH"
+format: docx
+toc: true
+---
+
+## pkgs
+
+```{r}
+library(tidyverse)
+library(fpp3)
+```
+
+## data
+
+```{r}
+empleo_tsbl <- us_employment |> 
+  filter(year(Month) >= 1990, Title == "Retail Trade") |>
+  select(-Series_ID)
+```
+
+### download to csv
+
+```{r}
+# dir.create("parcial_1/datos") # Para crear una carpeta
+# us_retail_employment |> 
+#   write_csv("parcial_1/datos/empleo_eeuu.csv")
+```
+
+```{r}
+empleo_tsbl |> 
+  autoplot(Employed)
+```
+
+
+## Classical Decomposition
+
+### `mable` (model table)
+
+```{r}
+empleo_decomp <- empleo_tsbl |> 
+  model(
+    clasica = classical_decomposition(Employed, 
+                                      type = "additive")
+  )
+
+empleo_decomp
+```
+
+### Components
+
+```{r}
+empleo_components <- empleo_decomp |> 
+  components()
+
+empleo_components
+
+empleo_components |> 
+  autoplot()
+```
+
