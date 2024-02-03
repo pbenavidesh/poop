@@ -1,0 +1,164 @@
+---
+title: "Time series visualizations"
+author: "PBH"
+format: 
+  html:
+    toc: true
+    embed-resources: true
+---
+
+## pkgs
+
+```{r}
+#| message: false
+library(tidyverse) # pkgs for data science
+library(fpp3) # pkgs for ts
+library(plotly) # plotly interactive plots
+library(patchwork) # for handling many plots in one figure
+library(tidyquant) # toolkit for financial analysis and downloading data
+```
+
+## ingresos por hospedaje
+
+```{r}
+# ?aus_accommodation
+
+aus_accommodation
+```
+```{r}
+aus_accommodation |> 
+  distinct(State)
+
+tasmania <- aus_accommodation |> 
+  filter(State == "Tasmania") |> 
+  # select(Date, Takings, Occupancy) # option 1
+  # select(Date, Takings:Occupancy) # option 2
+  select(-c(State, CPI)) |>  # option 3
+  mutate(
+    `Año unión  N°1   ` = 1
+  ) |> 
+  janitor::clean_names()
+
+tasmania
+
+tasmania |> 
+  glimpse()
+names(tasmania)
+# CTRL/CMD + SHIFT + M
+```
+
+
+
+```{r}
+c(3, 6, 12, 89)
+c("pablo", "juan", "maria")
+c(TRUE, FALSE, FALSE, TRUE)
+```
+
+```{r}
+tasmania |> 
+  autoplot(takings, color = "slateblue1", size = 2) # slateblue1
+```
+
+We see that the Takings have an upward **trend**, yearly **seasonality**, and an increasing variance. We can try using a log transformation to stabilize the variance.
+
+### Time plot
+
+```{r}
+p <- tasmania |> 
+  autoplot(log(takings), color = "slateblue1", size = 1) +
+  geom_point()
+
+ggplotly(p, dynamicTicks = TRUE) |> 
+  rangeslider()
+```
+### Season plot
+
+```{r}
+tasmania |> 
+  gg_season(log(takings))
+```
+### Subseries plot
+
+```{r}
+tasmania |> 
+  gg_subseries(log(takings))
+```
+
+
+```{r}
+tasmania |> 
+  gg_tsdisplay(takings,plot_type = "partial")
+```
+
+## Stocks data from Yahoo Finance
+
+```{r}
+stocks <- c("TSLA", "GOOGL", "MSFT", "AAPL", "CEMEXCPO.MX")
+
+?tq_get
+stocks_data <- tq_get(
+  x = stocks,
+  get = "stock.prices",
+  from = "2014-01-01",
+  to = today() - 1
+)
+
+stocks_data
+stocks_data |> 
+  distinct(symbol)
+
+stocks_data <- stocks_data |> 
+  as_tsibble(index = date, key = symbol)
+
+stocks_data
+```
+
+```{r}
+stocks_data |> 
+  ggplot(aes(x = date, y = close, color = symbol)) +
+  theme_light() +
+  geom_line()
+```
+
+```{r}
+#| warning: false
+stocks_data |> 
+  filter(symbol == "AAPL") |> 
+  ggplot(aes(x = date, open = open, high = high, low = low, close = close)) +
+  theme_light() +
+  geom_candlestick() +
+  facet_wrap(~ symbol, ncol = 2, scales = "free_y")
+```
+
+
+
+```{r}
+# ALT + "-" <- 
+# CTRL/CMD + SHIFT + M |> 
+
+delete_cols <- c("CPI", "State")
+
+tasmania <- aus_accommodation |> 
+  filter(State == "Tasmania") |> 
+  # select(-CPI, -State)
+  # select(Date:Occupancy)
+  # select(Date, State, Takings, Occupancy)
+  select(- delete_cols) |> 
+  mutate(
+    `Año bisiesto  opción ` = 1
+  ) |> 
+  janitor::clean_names()
+
+
+tasmania
+
+c(4, 8 , 12, 5)
+c("pablo", "rodrigo", "pato")
+```
+
+```{r}
+tasmania |> 
+  autoplot(takings)
+```
+
