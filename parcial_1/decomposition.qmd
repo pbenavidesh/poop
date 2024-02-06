@@ -8,6 +8,7 @@ toc: true
 ## pkgs
 
 ```{r}
+#| message: false
 library(tidyverse)
 library(fpp3)
 ```
