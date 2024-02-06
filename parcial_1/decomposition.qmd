@@ -25,7 +25,7 @@ empleo_tsbl <- us_employment |>
 
 ```{r}
 # dir.create("parcial_1/datos") # Para crear una carpeta
-# us_retail_employment |> 
+# empleo_tsbl |>
 #   write_csv("parcial_1/datos/empleo_eeuu.csv")
 ```
 
@@ -58,6 +58,20 @@ empleo_components <- empleo_decomp |>
 empleo_components
 
 empleo_components |> 
+  autoplot()
+```
+
+## STL Decomposition
+
+```{r}
+empleo_stl <- empleo_tsbl |> 
+  model(
+    stl = STL(Employed),
+    stl2 = STL(Employed ~ trend(window = 7) + season(window = "periodic"))
+  )
+
+empleo_stl |> 
+  components() |> 
   autoplot()
 ```
 
