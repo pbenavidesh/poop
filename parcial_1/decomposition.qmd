@@ -63,6 +63,8 @@ empleo_components |>
 
 ## STL Decomposition
 
+https://github.com/pbenavidesh/poop
+
 ```{r}
 empleo_stl <- empleo_tsbl |> 
   model(
@@ -74,4 +76,35 @@ empleo_stl |>
   components() |> 
   autoplot()
 ```
+
+## Exercises
+
+### 1
+
+```{r}
+#| warning: false
+
+# autoplot() version
+global_economy |> 
+  autoplot(GDP/Population) +
+  theme(legend.position = "none")
+
+# ggplot() version
+global_economy |> 
+  ggplot(aes(x = Year, y = GDP/Population, color = Country)) +
+  geom_line() +
+  theme(legend.position = "none")
+```
+
+```{r}
+global_economy |> 
+  mutate(gdp_per_capita = GDP/Population) |> #compute GDP per capita
+  select(-c(Code, Growth:Exports)) |>  # remove those columns
+  filter(Year %in% 2010:2017) |> # keep years from 2010 to 2017
+  as_tibble() |> # convert to tibble
+  group_by(Country) |> 
+  summarise(mean_gdppc = mean(gdp_per_capita, na.rm = TRUE)) |> 
+  arrange(desc(mean_gdppc)) # arrange descending
+```
+
 
