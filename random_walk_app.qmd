@@ -31,7 +31,38 @@ series_tsbl <- series_tbl |>
 radioButtons(
   inputId = "series",
   label = "Escoge la serie a graficar",
-  choices = 
+  choices = series_ticker,
+  selected = "MXN=X"
 )
+```
+
+# Data
+
+```{r}
+tableOutput(outputId = "tabla")
+```
+
+# Time plot
+
+```{r}
+plotOutput(outputId = "grafica")
+```
+
+```{r}
+#| context: server
+
+tabla_filtrada <- reactive({
+  series_tsbl |> 
+    filter(symbol == input$series)
+})
+
+output$tabla <- renderTable({
+  tabla_filtrada()
+})
+
+output$grafica <- renderPlot({
+  tabla_filtrada() |> 
+    autoplot(close)
+})
 ```
 
