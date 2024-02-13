@@ -1,5 +1,5 @@
 ---
-title: "Forecasting"
+title: "Mi primera app"
 format: dashboard
 server: shiny
 ---
@@ -11,14 +11,27 @@ server: shiny
 
 library(tidyverse)
 library(fpp3)
+library(shiny)
+
+series_ticker <- c("MXN=X", "BTC-USD", "AAPL", "ABNB", "UBER")
 
 series_tbl <- tidyquant::tq_get(
-  x = c("MXN=X", "BTC-USD", "AAPL", "ABNB", "UBER"),
+  x = series_ticker,
   get = "stock.prices",
   from = "2015-01-01"
 )
 
 series_tsbl <- series_tbl |> 
   as_tsibble(index = date, key = symbol)
+```
+
+# {.sidebar}
+
+```{r}
+radioButtons(
+  inputId = "series",
+  label = "Escoge la serie a graficar",
+  choices = 
+)
 ```
 
