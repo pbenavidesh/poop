@@ -1,0 +1,183 @@
+---
+title: "Tarea descomposición"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+---
+
+```{r}
+#| message: false
+
+library(tidyverse)
+library(fpp3)
+```
+
+# Ejercicio 1
+
+```{r}
+#| warning: false
+
+# autoplot() version
+global_economy |> 
+  autoplot(GDP/Population) +
+  theme(legend.position = "none")
+
+# ggplot() version
+global_economy |> 
+  ggplot(aes(x = Year, y = GDP/Population, color = Country)) +
+  geom_line() +
+  theme(legend.position = "none")
+```
+
+```{r}
+global_economy |> 
+  mutate(gdp_per_capita = GDP/Population) |> #compute GDP per capita
+  select(-c(Code, Growth:Exports)) |>  # remove those columns
+  filter(Year %in% 2010:2017) |> # keep years from 2010 to 2017
+  as_tibble() |> # convert to tibble
+  group_by(Country) |> 
+  summarise(mean_gdppc = mean(gdp_per_capita, na.rm = TRUE)) |> 
+  arrange(desc(mean_gdppc)) # arrange descending
+```
+
+# Ejercicio 2
+
+## i
+
+## ii
+
+## iii
+
+```{r}
+vic_elec |> 
+  features(Demand, guerrero)
+vic_elec |> 
+  autoplot(box_cox(Demand, lambda = 0.0999))
+```
+
+
+# Ejercicio 3
+
+# Ejercicio 4
+
+## i
+
+```{r}
+fma::plastics
+```
+No es una `tsibble`, por lo tanto tenemos que convertirla.
+
+```{r}
+plastico <- as_tsibble(fma::plastics)
+
+plastico
+
+plastico |> 
+  autoplot(value)
+```
+
+- tendencia a la alza
+- estacionalidad anual
+
+## ii
+
+tidyverse
+fpp3 (tsibble, feasts, fable)
+
+```{r}
+plastico_fit <- plastico |> 
+  model(
+    clasica = classical_decomposition(value, 
+                                      type = "multiplicative")
+  )
+
+plastico_fit |> 
+  components() |> 
+  autoplot()
+```
+
+
+## iii
+
+Sí.
+
+## iv
+
+```{r}
+plastico_components <- plastico_fit |> 
+  components()
+plastico_components |> 
+  ggplot(aes(x = index, y = season_adjust)) +
+  geom_line()
+
+plastico_components |>
+  mutate(desestacionalizados = value / seasonal) |> 
+  ggplot(aes(x = index, y = desestacionalizados)) +
+  geom_line()
+
+plastico |> 
+  autoplot(value, color = "grey", size = 1) +
+  autolayer(plastico_components, season_adjust, color = "firebrick", size = 1)
+```
+
+
+## v
+
+```{r}
+outlier <- 2
+```
+
+
+Cambiando la observación `{r} outlier`:
+
+**_LaTeX_**
+
+La ecuación de la recta: $y = mx + b$
+
+
+La ecuación de la recta: $$
+y = mx + b
+$$
+
+```{r}
+plastico2 <- plastico
+
+plastico2$value[outlier] <- plastico$value[outlier] + 1500
+
+plastico2
+
+plastico2 |> 
+  model(
+    clasica = classical_decomposition(value, type = "multiplicative")
+  ) |> 
+  components() |> 
+  autoplot()
+```
+
+- Modificó la tendencia en los periodos anteriores y posteriores inmediatos.
+- Cambió la forma del patrón estacional, "contagiando" a toda la serie.
+
+
+## vi
+
+### STL
+
+```{r}
+plastico_stl <- plastico2 |> 
+  model(stl = STL(value ~ season(window = "periodic"), robust = TRUE))
+
+plastico_stl |> 
+  components() |> 
+  autoplot()
+```
+
+
+
+```{r}
+plastico |> 
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = value), size = 2) +
+  geom_line(data = plastico2, aes(x = index, y = value), color = "lightblue")
+```
+
