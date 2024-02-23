@@ -181,3 +181,15 @@ plastico |>
   geom_line(data = plastico2, aes(x = index, y = value), color = "lightblue")
 ```
 
+
+
+$$
+y_t = y_{t-1} + \varepsilon_t\\
+\varepsilon_t \sim N(\mu = 0, \sigma^2) \\
+E[y_t] = E[y_{t-1} + \varepsilon_t]\\
+E[y_t] = E[y_{t-1}] + E[\varepsilon_t]\\
+E[y_t] = y_{t-1} + 0\\
+E[y_t] = y_{t-1}\\
+\hat{y}_t = y_{t-1}\\
+\hat{y}_{T+1} = y_{T}
+$$

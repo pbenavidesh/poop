@@ -1,0 +1,126 @@
+---
+title: "Forecasting"
+format: html
+---
+
+```{r}
+#| message: false
+
+library(tidyverse)
+library(fpp3)
+```
+
+
+```{r}
+mex <- global_economy |> 
+  filter(Country == "Mexico") |> 
+  drop_na() |> 
+  select(-c(Country, Code))
+
+mex |> 
+  features(Growth, features = guerrero)
+
+mex |> 
+  autoplot(Growth)
+
+mex |> 
+  autoplot(box_cox(Growth, lambda = 0.7249))
+```
+## Estimación de los modelos
+
+```{r}
+mex_fit <- mex |> 
+  model(
+    media = MEAN(box_cox(Growth, lambda = 0.7249)),
+    naive = NAIVE(box_cox(Growth, lambda = 0.7249)),
+    drift = RW(box_cox(Growth, lambda = 0.7249) ~ drift())
+  )
+
+mex_fit
+```
+## Diagnóstico de residuos
+
+```{r}
+mex_fit |> 
+  augment()
+
+mex_fit |> 
+  augment() |> 
+  features(.innov, ljung_box, lag = 10, dof = 0)
+```
+Como el p-value de los tres modelos es mayor a nuestra $\alpha$; $p_{value} = 0.05$, **NO RECHAZAMOS** $H_0 : \text{"Los residuos son ruido blanco"}$.
+
+### Media
+
+```{r}
+#| warning: false
+
+mex_fit |> 
+  select(media) |> 
+  gg_tsresiduals()
+```
+
+### Naive
+
+```{r}
+#| warning: false
+
+mex_fit |> 
+  select(naive) |> 
+  gg_tsresiduals()
+```
+
+### Drift
+
+```{r}
+#| warning: false
+
+mex_fit |> 
+  select(drift) |> 
+  gg_tsresiduals()
+```
+
+
+## Forecast
+
+```{r}
+mex_fc <- mex_fit |> 
+  forecast(h = "6 years")
+
+mex_fc
+
+mex_fc |> 
+  autoplot(mex) +
+  facet_wrap(~ .model) +
+  theme(legend.position = "none")
+```
+
+# Repaso
+
+```{r}
+aus_livestock |> 
+  distinct(Animal)
+```
+
+## Data
+
+```{r}
+ovejas <- aus_livestock |> 
+  filter(Animal == "Sheep",
+         State == "New South Wales")
+
+ovejas
+
+ovejas |> 
+  autoplot(Count)
+```
+
+## Train/Test splits
+
+```{r}
+ovejas_train <- ovejas |> 
+  filter_index(. ~ "Dec. 2012")
+
+ovejas_train
+```
+
