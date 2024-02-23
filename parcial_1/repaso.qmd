@@ -107,7 +107,8 @@ aus_livestock |>
 ```{r}
 ovejas <- aus_livestock |> 
   filter(Animal == "Sheep",
-         State == "New South Wales")
+         State == "New South Wales") |> 
+  select(-c(Animal, State))
 
 ovejas
 
@@ -150,6 +151,9 @@ ovejas_train |>
 ```{r}
 ovejas_train |> 
   gg_season(Count)
+
+ovejas_train |> 
+  gg_season(box_cox(Count, lambda))
 ```
 ```{r}
 ovejas_train |> 
@@ -161,7 +165,76 @@ ovejas_train |>
 ```{r}
 ovejas_train |> 
   model(
-    stl = STL(Count)
+    stl = STL(box_cox(Count, lambda), robust = TRUE)
+  ) |> 
+  components() |> 
+  autoplot()
+```
+
+## Model estimation
+
+```{r}
+ovejas_fit <- ovejas_train |> 
+  model(
+    snaive_bc = SNAIVE(box_cox(Count, lambda)),
+    snaive = SNAIVE(Count),
+    combi_bc = decomposition_model(
+      STL(box_cox(Count, lambda), robust = TRUE),
+      SNAIVE(season_year),
+      RW(season_adjust ~ drift())
+    ),
+    combi = decomposition_model(
+      STL(Count, robust = TRUE),
+      SNAIVE(season_year),
+      RW(season_adjust ~ drift())
+    )
   )
+ovejas_fit
+```
+Autocorrelation diagnostics
+
+```{r}
+ovejas_fit |> 
+  select(snaive_bc) |> 
+  gg_tsresiduals()
+
+ovejas_fit |> 
+  select(snaive) |> 
+  gg_tsresiduals()
+
+ovejas_fit |> 
+  select(combi) |> 
+  gg_tsresiduals()
+
+ovejas_fit |> 
+  select(combi_bc) |> 
+  gg_tsresiduals()
+
+ovejas_fit |> 
+  augment() |> 
+  features(.innov, ljung_box, dof = 0, lag = 24)
+```
+
+```{r}
+accuracy(ovejas_fit) |> 
+  arrange(MAPE)
+```
+
+## Forecast
+
+```{r}
+ovejas_fc <- ovejas_fit |> 
+  forecast(h = "6 years")
+
+ovejas_fc
+
+ovejas_fc |> 
+  autoplot(ovejas |> filter_index("Jan. 2003" ~ .), level = NULL)
+```
+
+```{r}
+ovejas_fc |> 
+  accuracy(ovejas) |> 
+  arrange(MAPE)
 ```
 
