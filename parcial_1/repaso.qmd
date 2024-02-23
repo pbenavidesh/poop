@@ -124,3 +124,44 @@ ovejas_train <- ovejas |>
 ovejas_train
 ```
 
+## Visualization
+
+### Time plot
+
+```{r}
+ovejas_train |> 
+  autoplot(Count)
+```
+
+```{r}
+lambda <- ovejas_train |> 
+  features(Count, features = guerrero) |> 
+  pull(lambda_guerrero)
+lambda
+
+ovejas_train |> 
+  autoplot(box_cox(Count, lambda))
+```
+
+
+
+### Season plot
+
+```{r}
+ovejas_train |> 
+  gg_season(Count)
+```
+```{r}
+ovejas_train |> 
+  features(Count, feat_stl)
+```
+
+### STL Decomposition
+
+```{r}
+ovejas_train |> 
+  model(
+    stl = STL(Count)
+  )
+```
+
