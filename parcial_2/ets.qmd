@@ -72,6 +72,7 @@ Esto nos indica que el modelo que tiene un menor **MAE** en el pronóstico es **
 
 Graficamos los datos de entrenamiento en niveles y en logaritmos:
 
+
 ```{r}
 beer_train |> 
   autoplot(Beer)
@@ -144,6 +145,56 @@ beer_fit |>
   augment() |> 
   features(.innov, ljung_box, lag = 8)
 ```
+```{r}
+beer_fit |> 
+  select(stl_ets_A) |> 
+  gg_tsresiduals()
+
+beer_fit |> 
+  select(stl_ets_M) |> 
+  gg_tsresiduals()
+```
+Hacemos los pronósticos para los siguientes 10 periodos (dos años y medio):
+
+```{r}
+beer_fc <- beer_fit |> 
+  forecast(h = "2 years 6 months")
+
+beer_fc
+
+beer_fc |> 
+  autoplot(recent_production, level = NULL, size = 1)
+
+beer_fc |> 
+  autoplot(recent_production |> filter_index("2005 Q1" ~ .), level = NULL, size = 1)
+
+beer_fc |> 
+  autoplot(recent_production |> filter_index("2005 Q1" ~ .), size = 1) +
+  facet_wrap(~ .model, ncol = 3) +
+  theme(legend.position = "none")
+
+beer_fc |> 
+  filter(.model != "stl_ets_M") |> 
+  autoplot(recent_production |> filter_index("2005 Q1" ~ .), size = 1) +
+  facet_wrap(~ .model, ncol = 3) +
+  theme(legend.position = "none")
+
+beer_fc |> 
+  accuracy(recent_production) |> 
+  arrange(MAPE)
+```
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
 
 
 
