@@ -184,9 +184,21 @@ beer_fc |>
   arrange(MAPE)
 ```
 
+## Pronósticos
+
+Realizaremos un pronóstico hacia el futuro, con el mejor modelo:
 
 ```{r}
+beer_fut <- recent_production |> 
+  model(
+    ets_MAdM = ETS(Beer ~ error("M") + trend("Ad") + season("M"))
+  ) |> 
+  forecast(h = "2 years 6 months")
 
+beer_fut
+
+beer_fut |> 
+  autoplot(recent_production)
 ```
 
 
