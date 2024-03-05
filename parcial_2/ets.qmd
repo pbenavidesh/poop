@@ -79,8 +79,51 @@ beer_train |>
 beer_train |> 
   autoplot(log(Beer))
 ```
+Hacemos una descomposición de la serie:
+
+```{r}
+dcmp <- beer_train |> 
+  model(
+    STL(log(Beer), robust = TRUE)
+  ) 
+
+dcmp |> 
+  components() |> 
+  autoplot()
+
+dcmp |> 
+  components() |> 
+  ggplot(aes(x = Quarter, y = season_adjust)) +
+  geom_line()
+
+beer_train |> 
+  model(
+    STL(Beer, robust = TRUE)
+  ) |> 
+  components() |> 
+  autoplot()
+```
+
 
 ## Ajuste de modelos
+
+```{r}
+beer_fit <- beer_train |> 
+  model(
+    snaive = SNAIVE(Beer),
+    ets_ANA = ETS(Beer ~ error("A") + trend("N") + season("A")),
+    ets_AAdA = ETS(Beer ~ error("A") + trend("Ad") + season("A")),
+    ets_MAdM = ETS(Beer ~ error("M") + trend("Ad") + season("M")),
+    ets_ANA_l = ETS(log(Beer) ~ error("A") + trend("N") + season("A")),
+    ets_AAdA_l = ETS(log(Beer) ~ error("A") + trend("Ad") + season("A")),
+    ets_MAdM_l = ETS(log(Beer) ~ error("M") + trend("Ad") + season("M")),
+    stlf = 
+  )
+```
+
+
+
+
 
 
 
