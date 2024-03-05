@@ -117,15 +117,39 @@ beer_fit <- beer_train |>
     ets_ANA_l = ETS(log(Beer) ~ error("A") + trend("N") + season("A")),
     ets_AAdA_l = ETS(log(Beer) ~ error("A") + trend("Ad") + season("A")),
     ets_MAdM_l = ETS(log(Beer) ~ error("M") + trend("Ad") + season("M")),
-    stlf = 
+    stl_ets_A = decomposition_model(
+      STL(log(Beer), robust = TRUE),
+      ETS(season_year ~ error("A") + trend("N") + season("A")),
+      ETS(season_adjust ~ error("A") + trend("Ad") + season("N"))
+    ),
+    stl_ets_M = decomposition_model(
+      STL(log(Beer), robust = TRUE),
+      ETS(season_year ~ error("M") + trend("N") + season("M")),
+      ETS(season_adjust ~ error("A") + trend("Ad") + season("N"))
+    )
   )
+
+beer_fit
+```
+
+Vamos a utilizar el MAPE como métrica de error:
+
+```{r}
+accuracy(beer_fit) |> 
+  arrange(MAPE)
+```
+
+```{r}
+beer_fit |> 
+  augment() |> 
+  features(.innov, ljung_box, lag = 8)
 ```
 
 
 
 
 
-
+## OTRO
 
 ```{r}
 beer_fit <- beer_train |> 
