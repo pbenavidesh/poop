@@ -1,0 +1,177 @@
+---
+title: "ETS"
+author: "PBH"
+date: today
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    code-link: true
+    theme: 
+      light: minty
+      dark: darkly
+---
+
+## pkgs
+
+```{r}
+#| message: false
+library(tidyverse)
+library(fpp3)
+```
+
+## Ej: Producción de cerveza
+
+Ya habíamos modelado la producción de cerveza utilizando los métodos de referencia:
+
+```{r}
+recent_production <- aus_production %>% filter(year(Quarter) >= 1992)
+beer_train <- recent_production %>% filter(year(Quarter) <= 2007)
+
+beer_fit <- beer_train %>%
+  model(
+    Mean = MEAN(Beer),
+    `Naïve` = NAIVE(Beer),
+    `Seasonal naïve` = SNAIVE(Beer),
+    Drift = RW(Beer ~ drift())
+  )
+
+beer_fc <- beer_fit %>%
+  forecast(h = 10)
+
+beer_fc %>%
+  autoplot(recent_production, level = NULL) +
+  xlab("Year") + ylab("Megalitres") +
+  ggtitle("Forecasts for quarterly beer production") +
+  guides(colour=guide_legend(title="Forecast"))
+```
+
+Calculando las métricas de error en el **entrenamiento**:
+
+```{r}
+beer_accu_train <- accuracy(beer_fit) |> 
+  arrange(MAE)
+beer_accu_train
+```
+
+Nos dice que el modelo que mejor se ajusta en el entrenamiento, de acuerdo al **MAE** es **`{r} beer_accu_train |> select(.model) |> slice(1) |> pull()`**.
+
+Calculamos las métricas de **error de pronóstico**:
+
+```{r}
+beer_accu_fc <- beer_fc |> 
+  accuracy(recent_production) |> 
+  arrange(MAE)
+
+beer_accu_fc
+```
+
+Esto nos indica que el modelo que tiene un menor **MAE** en el pronóstico es **`{r} beer_accu_fc |> select(.model) |> slice(1) |> pull()`**.
+
+## Visualización
+
+Graficamos los datos de entrenamiento en niveles y en logaritmos:
+
+```{r}
+beer_train |> 
+  autoplot(Beer)
+
+beer_train |> 
+  autoplot(log(Beer))
+```
+
+## Ajuste de modelos
+
+
+
+```{r}
+beer_fit <- beer_train |> 
+  model(
+    snaive = SNAIVE(Beer),
+    snaive_log = SNAIVE(log(Beer)),
+    ets_MNM_log = ETS(log(Beer) ~ error("M") + trend("N") + season("M")),
+    ets_MNM = ETS(Beer ~ error("M") + trend("N") + season("M")),
+    ets_M_M = ETS(Beer ~ error("M") + season("M")),
+    ets_auto = ETS(Beer),
+    ets_auto_log = ETS(log(Beer))
+  )
+
+beer_fit
+```
+```{r}
+beer_fit |> 
+  select(ets_M_M) |> 
+  report()
+
+beer_fit |> 
+  select(ets_bc_auto) |> 
+  report()
+
+beer_fit |> 
+  select(ets_auto) |> 
+  report()
+```
+
+Los modelos `ets_M_M` y `ets_auto` dan el mismo resultado que el modelo que definimos como `ETS_MNM`, y el modelo `ets_bc_auto` da el mismo resultado que el modelo `ets_MNM_bc`. Por lo tanto, vamos a quitarlos:
+
+```{r}
+beer_fit <- beer_fit |> 
+  select(-c(ets_M_M, ets_auto, ets_auto_log))
+
+beer_fit
+
+accuracy(beer_fit) |> 
+  arrange(MAPE)
+```
+
+
+```{r}
+#| warning: false
+
+beer_aug <- beer_fit |> 
+  augment()
+
+beer_aug
+
+beer_train |> 
+  autoplot(Beer, size = 1) + 
+  autolayer(beer_aug, .fitted, size = 1) +
+  facet_wrap(~.model, ncol = 2) +
+  theme(legend.position = "none")
+```
+
+```{r}
+#| warning: true
+
+beer_fc <- beer_fit |> 
+  forecast(h = 10)
+
+beer_fc
+
+beer_fc |> 
+  autoplot(recent_production, level = NULL)
+
+beer_fc |> 
+  autoplot(recent_production |> filter_index("2005 Q1" ~ .), level = NULL, size = 1)
+
+beer_fc |> 
+  autoplot(recent_production |> filter_index("2007 Q1" ~ .), size = 1) +
+  facet_wrap(~ .model, ncol = 2)
+
+beer_fc |> 
+  accuracy(recent_production) |> 
+  arrange(MAPE)
+```
+
+## Tarea
+
+Pueden 
+
+```{r}
+aus_production
+
+us_employment |> 
+  distinct(Title)
+
+global_economy
+```
