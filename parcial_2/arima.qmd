@@ -1,0 +1,102 @@
+---
+title: "ARIMA"
+format: html
+---
+
+```{r}
+#| message: false
+
+library(tidyverse)
+library(fpp3)
+```
+
+## US Change
+
+```{r}
+us_change |> 
+  autoplot(Consumption)
+```
+
+Vamos a utilizar la prueba `unitroot_ndiffs()` para ver si necesitamos diferenciar la serie para convertirla en estacionaria:
+
+```{r}
+us_change |> 
+  features(Consumption, unitroot_ndiffs)
+```
+
+`ndiffs` nos dice 0. Por lo tanto, no se requieren diferencias y el orden **d** de nuestro modelo ARIMA sería 0; $d = 0$.
+
+```{r}
+google_stock <- gafa_stock %>%
+  filter(Symbol == "GOOG") %>%
+  mutate(day = row_number()) %>%
+  update_tsibble(index = day, regular = TRUE) %>% 
+  mutate(diff_close = difference(Close))
+
+google_2015 <- google_stock %>% filter(year(Date) == 2015)
+
+google_2015 |> 
+  autoplot(Close)
+
+google_2015 |> 
+  gg_tsdisplay(Close, plot_type = "partial")
+```
+
+
+Para encontrar el orden $p$ y $q$, vamos a utilizar las funciones de autocorrelación (**ACF**) y autocorrelación parcial (**PACF**):
+
+```{r}
+us_change |> 
+  gg_tsdisplay(Consumption, plot_type = "partial")
+```
+
+La gráfica de la **PACF** sugiere un orden $p = 3$, y la **ACF** sugiere $q = 3$, o incluso $q = 4$.
+
+Entonces, podríamos proponer los siguientes modelos ARIMA:
+
+$$
+ARIMA(p,d,q) : y_{t}^{\prime}=c+\phi_{1} y_{t-1}^{\prime}+\cdots+\phi_{p} y_{t-p}^{\prime}+\theta_{1} \varepsilon_{t-1}+\cdots+\theta_{q} \varepsilon_{t-q}+\varepsilon_{t} \\
+ARIMA(3,0,3): y_t = c +  \phi_{1} y_{t-1}+ \phi_{2} y_{t-2} + \phi_3 y_{t-3} + \theta_1\varepsilon_{t-1} +\theta_2\varepsilon_{t-2} + \theta_3 \varepsilon_{t-3} + \varepsilon_t \\
+ARIMA(3,0,4): y_t = c +  \phi_{1} y_{t-1}+ \phi_{2} y_{t-2} + \phi_3 y_{t-3} + \theta_1\varepsilon_{t-1} +\theta_2\varepsilon_{t-2} + \theta_3 \varepsilon_{t-3} + + \theta_4 \varepsilon_{t-4} + \varepsilon_t   \\
+ARIMA(3,0,0): y_t = c +  \phi_{1} y_{t-1}+ \phi_{2} y_{t-2} + \phi_3 y_{t-3} + \varepsilon_t \\
+ARIMA(0,0,3): y_t = c + \theta_1\varepsilon_{t-1} +\theta_2\varepsilon_{t-2} + \theta_3 \varepsilon_{t-3} + \varepsilon_t \\
+ARIMA(0,0,4): y_t = c + \theta_1\varepsilon_{t-1} +\theta_2\varepsilon_{t-2} + \theta_3 \varepsilon_{t-3} + \theta_4 \varepsilon_{t-4} + \varepsilon_t
+$$
+
+
+```{r}
+us_change_fit <- us_change |> 
+  model(
+    arima_303 = ARIMA(Consumption ~ pdq(3,0,3) + PDQ(0,0,0)),
+    arima_304 = ARIMA(Consumption ~ pdq(3,0,4) + PDQ(0,0,0) + 1),
+    arima_300 = ARIMA(Consumption ~ pdq(3,0,0) + PDQ(0,0,0)),
+    arima_003 = ARIMA(Consumption ~ pdq(0,0,3) + PDQ(0,0,0)),
+    arima_004 = ARIMA(Consumption ~ pdq(0,0,4) + PDQ(0,0,0))
+  )
+
+us_change_fit
+```
+
+```{r}
+us_change_fit |> 
+  select(arima_303) |> 
+  report()
+
+us_change_fit |> 
+  select(arima_300) |> 
+  report()
+
+us_change_fit |> 
+  select(arima_003) |> 
+  report()
+```
+
+LA forma tradicional de elegir el orden p y q de un modelo ARIMA es a través de los criterios de información (AIC, AICc, BIC):
+
+```{r}
+us_change_fit |> 
+  glance() |> 
+  arrange(AICc)
+```
+
+Sin embargo, también 
