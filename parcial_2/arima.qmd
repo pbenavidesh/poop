@@ -1,6 +1,9 @@
 ---
 title: "ARIMA"
-format: html
+format: 
+  html:
+    toc: true
+    embed-resources: true
 ---
 
 ```{r}
@@ -71,7 +74,9 @@ us_change_fit <- us_change |>
     arima_304 = ARIMA(Consumption ~ pdq(3,0,4) + PDQ(0,0,0) + 1),
     arima_300 = ARIMA(Consumption ~ pdq(3,0,0) + PDQ(0,0,0)),
     arima_003 = ARIMA(Consumption ~ pdq(0,0,3) + PDQ(0,0,0)),
-    arima_004 = ARIMA(Consumption ~ pdq(0,0,4) + PDQ(0,0,0))
+    arima_004 = ARIMA(Consumption ~ pdq(0,0,4) + PDQ(0,0,0)),
+    arima_100 = ARIMA(Consumption ~ pdq(1,0,0) + PDQ(0,0,0)),
+    arima_001 = ARIMA(Consumption ~ pdq(0,0,1) + PDQ(0,0,0))
   )
 
 us_change_fit
@@ -99,4 +104,70 @@ us_change_fit |>
   arrange(AICc)
 ```
 
-Sin embargo, también 
+Sin embargo, también podríamos escoger el modelo a partir de las métricas de error en el entrenamiento:
+
+```{r}
+accuracy(us_change_fit) |> 
+  arrange(MAE)
+```
+
+Realizamos el diagnóstico de residuos para los dos modelos que parecen ajustarse mejor:
+
+```{r}
+us_change_fit |> 
+  select(arima_300) |> 
+  gg_tsresiduals()
+
+us_change_fit |> 
+  select(arima_304) |> 
+  gg_tsresiduals()
+
+us_change_fit |> 
+  select(arima_100) |> 
+  gg_tsresiduals()
+
+us_change_fit |> 
+  select(arima_001) |> 
+  gg_tsresiduals()
+```
+
+```{r}
+us_change_fit |> 
+  augment() |> 
+  features(.innov, ljung_box, lag = 10) |> 
+  mutate(residuos_autocorrelacionados = if_else(lb_pvalue >=0.05, "No autocorrelación", "Autocorrelacionados"))
+```
+
+```{r}
+tictoc::tic()
+us_change |> 
+  model(auto_arima = ARIMA(Consumption ~ PDQ(0,0,0))) |> 
+  report()
+tictoc::toc()
+```
+
+```{r}
+tictoc::tic()
+us_change |> 
+  model(
+    auto_arima = ARIMA(Consumption ~ PDQ(0,0,0), 
+                       stepwise = FALSE, approximation = FALSE)
+  ) |> 
+  report()
+tictoc::toc()
+```
+
+```{r}
+tictoc::tic()
+us_change |> 
+  model(
+    semi_auto_arima = ARIMA(Consumption ~ pdq(p = 1:3, d = 0, q = 0:2) + PDQ(0,0,0))
+  ) |> 
+  report()
+tictoc::toc()
+```
+
+```{r}
+1:3
+```
+
