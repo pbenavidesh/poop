@@ -1,0 +1,92 @@
+---
+title: "Regression"
+format: html
+---
+
+```{r}
+#| message: false
+
+library(tidyverse)
+library(fpp3)
+```
+
+```{r}
+recent_production <- aus_production %>% 
+  filter(year(Quarter) >= 1992)
+
+recent_production %>% 
+  autoplot(Beer) +
+  labs(x = "Año", y = "Megalitros", 
+       title = "Producción de cerveza trimestral en Australia")
+```
+
+```{r}
+recent_production %>% 
+  select(Quarter,Beer) %>% 
+  mutate(tendencia = seq_along(recent_production$Quarter),
+         q2 = if_else(quarter(Quarter)==2,1,0),
+         q3 = if_else(quarter(Quarter)==3,1,0),
+         q4 = if_else(quarter(Quarter)==4,1,0)
+         )
+```
+
+$$
+y_{t,Beer} = \beta_0 + \beta_1t+ \beta_2D_2 + \beta_3D_3 + \beta_4D_4 + \varepsilon_t
+$$
+
+En trim. 2:
+
+$$
+y_{t,Beer} = \beta_0 + \beta_1t+ \beta_2 + \varepsilon_t
+$$
+
+##
+
+```{r}
+us_change |> 
+  model( reglin = TSLM(Consumption ~ Income)) |> 
+  augment() |> 
+  gg_tsdisplay(.innov, plot_type = "partial")
+```
+
+
+
+##
+
+```{r}
+vic_elec_daily <- vic_elec %>%
+  filter(year(Time) == 2014) %>%
+  index_by(Date = date(Time)) %>%
+  summarise(
+    Demand = sum(Demand)/1e3,
+    Temperature = max(Temperature),
+    Holiday = any(Holiday)
+  ) %>%
+  mutate(Day_Type = case_when(
+    Holiday ~ "Holiday",
+    wday(Date) %in% 2:6 ~ "Weekday",
+    TRUE ~ "Weekend"
+  ))
+
+```
+
+
+```{r}
+vic_elec_daily |> 
+  autoplot(Demand)
+
+vic_elec_daily %>%
+  ggplot(aes(x=Temperature, y=Demand, colour=Day_Type)) +
+    geom_point() +
+    ylab("Electricity demand (GW)") +
+    xlab("Maximum daily temperature")
+```
+
+
+```{r}
+fit <- vic_elec_daily %>%
+  model(ARIMA(Demand ~ Temperature + I(Temperature^2) + (Day_Type=="Weekday")))
+
+report(fit)
+```
+

@@ -238,3 +238,16 @@ ovejas_fc |>
   arrange(MAPE)
 ```
 
+```{r}
+ovejas |> 
+  model(
+    combi_bc = decomposition_model(
+      STL(box_cox(Count, lambda), robust = TRUE),
+      SNAIVE(season_year),
+      RW(season_adjust ~ drift())
+    )
+  ) |> 
+  forecast(h = "6 years") |> 
+  autoplot(ovejas)
+```
+

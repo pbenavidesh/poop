@@ -295,7 +295,7 @@ beer_fc |>
 
 ## Tarea
 
-Pueden 
+Pueden utilizar series de estas tablas:
 
 ```{r}
 aus_production
