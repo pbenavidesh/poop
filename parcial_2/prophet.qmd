@@ -72,5 +72,14 @@ accuracy(lax_pass_fit) |>
   select(type, .model, .type, MAPE, MASE, MAE, RMSE)
 ```
 
+## forecast on the test set
+
+```{r}
+lax_pass_fc <- lax_pass_fit |> 
+  forecast(h = "2 years")
+
+lax_pass_fc |> 
+  autoplot(lax_passengers |> filter_index("2014 Jan." ~ .), level = NULL)
+```
 
 
