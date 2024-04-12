@@ -68,8 +68,8 @@ lax_pass_fit
 
 ```{r}
 accuracy(lax_pass_fit) |> 
-  group_by(type) |> 
-  arrange(MAPE)
+  arrange(type, MAPE) |> 
+  select(type, .model, .type, MAPE, MASE, MAE, RMSE)
 ```
 
 
