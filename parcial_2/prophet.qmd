@@ -115,3 +115,34 @@ plotly::ggplotly(p, dynamicTicks = TRUE) |>
   plotly::rangeslider()
 ```
 
+```{r}
+lax_pass_fc |> 
+  accuracy(lax_passengers) |> 
+  arrange(type, MAPE) |> 
+  select(type, .model, .type, MAPE, MASE, MAE, RMSE)
+```
+
+```{r}
+lax_pass_fit <- lax_pass_fit |> 
+  mutate(combinado2 = (combinado + prophet)/2,
+         combinado3 = (prophet + prophet_auto + ets + sarima)/4)
+
+lax_pass_fc <- lax_pass_fit |> 
+  select(combinado, combinado2, combinado3, prophet, prophet_auto, sarima, ets) |> 
+  forecast(h = "2 years")
+
+p <- lax_pass_fc |> 
+  ggplot(aes(x = month, y = .mean)) +
+  geom_line(data = lax_passengers, aes(y = passengers)) +
+  geom_line(aes(color = .model)) +
+  facet_wrap(~ type, scales = "free_y", ncol = 1)
+
+plotly::ggplotly(p, dynamicTicks = TRUE) |> 
+  plotly::rangeslider()
+
+lax_pass_fc |> 
+  accuracy(lax_passengers) |> 
+  arrange(type, MAPE) |> 
+  select(type, .model, .type, MAPE, MASE, MAE, RMSE)
+```
+
