@@ -58,11 +58,19 @@ lax_pass_fit <- lax_pass_train |>
     sarima = ARIMA(passengers),
     reg_lin = TSLM(passengers ~ season() + trend()),
     reg_x_partes = TSLM(passengers~ season() + trend(knots = as.Date("2010-01-01"))),
-    harmonic = ARIMA(passengers ~ fourier(K = 2) + PDQ()),
+    harmonic = ARIMA(passengers ~ fourier(K = 2) + PDQ(0,0,0)),
     prophet = prophet(passengers ~ growth("linear") + season("year", type = "multiplicative")),
     prophet_auto = prophet(passengers)
   )
 tictoc::toc()
 lax_pass_fit
 ```
+
+```{r}
+accuracy(lax_pass_fit) |> 
+  group_by(type) |> 
+  arrange(MAPE)
+```
+
+
 
