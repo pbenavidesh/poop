@@ -1,0 +1,29 @@
+---
+title: "Prophet"
+format: html
+---
+
+```{r}
+#| message: false
+
+library(tidyverse)
+library(fpp3)
+library(fable.prophet)
+```
+
+```{r}
+lax_passengers <- read.csv("https://raw.githubusercontent.com/mitchelloharawild/fable.prophet/master/data-raw/lax_passengers.csv")
+
+
+lax_passengers <- lax_passengers |>
+  mutate(datetime = mdy_hms(ReportPeriod)) |>
+  group_by(month = yearmonth(datetime), type = Domestic_International) |>
+  summarise(passengers = sum(Passenger_Count)) |>
+  ungroup() |> 
+  as_tsibble(index = month, key = type)
+```
+
+```{r}
+lax_passengers
+```
+
