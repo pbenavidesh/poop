@@ -80,6 +80,14 @@ lax_pass_fc <- lax_pass_fit |>
 
 lax_pass_fc |> 
   autoplot(lax_passengers |> filter_index("2014 Jan." ~ .), level = NULL)
+
+p <- lax_pass_fc |> 
+  ggplot(aes(x = month, y = .mean)) +
+  geom_line(aes(color = .model)) +
+  geom_line(data = lax_passengers|> filter_index("2014 Jan." ~ .), aes(y = passengers)) +
+  facet_wrap(~ type, scales = "free_y", ncol = 1)
+
+plotly::ggplotly(p, dynamicTicks = TRUE)
 ```
 
 
