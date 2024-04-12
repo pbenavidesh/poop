@@ -18,12 +18,51 @@ lax_passengers <- read.csv("https://raw.githubusercontent.com/mitchelloharawild/
 lax_passengers <- lax_passengers |>
   mutate(datetime = mdy_hms(ReportPeriod)) |>
   group_by(month = yearmonth(datetime), type = Domestic_International) |>
-  summarise(passengers = sum(Passenger_Count)) |>
-  ungroup() |> 
+  summarise(passengers = sum(Passenger_Count), .groups = "drop") |> 
   as_tsibble(index = month, key = type)
 ```
 
 ```{r}
 lax_passengers
+```
+
+```{r}
+lax_passengers |> 
+  autoplot(passengers) +
+  theme(legend.position = "top")
+```
+
+## train/test splits
+
+Vamos a hacer un pronóstico a dos años.
+
+```{r}
+lax_pass_train <- lax_passengers |> 
+  filter_index(. ~ "2017 Mar.")
+
+lax_pass_train
+```
+
+## Model fitting
+
+```{r}
+tictoc::tic()
+lax_pass_fit <- lax_pass_train |> 
+  model(
+    snaive = SNAIVE(passengers),
+    snaive_drift = decomposition_model(
+      STL(passengers, robust = TRUE),
+      RW(season_adjust ~ drift())
+    ),
+    ets = ETS(passengers),
+    sarima = ARIMA(passengers),
+    reg_lin = TSLM(passengers ~ season() + trend()),
+    reg_x_partes = TSLM(passengers~ season() + trend(knots = as.Date("2010-01-01"))),
+    harmonic = ARIMA(passengers ~ fourier(K = 2) + PDQ()),
+    prophet = prophet(passengers ~ growth("linear") + season("year", type = "multiplicative")),
+    prophet_auto = prophet(passengers)
+  )
+tictoc::toc()
+lax_pass_fit
 ```
 
