@@ -83,11 +83,35 @@ lax_pass_fc |>
 
 p <- lax_pass_fc |> 
   ggplot(aes(x = month, y = .mean)) +
+  geom_line(data = lax_passengers, aes(y = passengers)) +
   geom_line(aes(color = .model)) +
-  geom_line(data = lax_passengers|> filter_index("2014 Jan." ~ .), aes(y = passengers)) +
   facet_wrap(~ type, scales = "free_y", ncol = 1)
 
-plotly::ggplotly(p, dynamicTicks = TRUE)
+plotly::ggplotly(p, dynamicTicks = TRUE) |> 
+  plotly::rangeslider()
 ```
 
+Vamos a combinar los modelos `ets`, `prophet_auto` y `sarima`:
+
+```{r}
+lax_pass_fit <- lax_pass_fit |> 
+  mutate(combinado = (ets + prophet_auto + sarima)/3)
+lax_pass_fit
+```
+
+Corremos los pronósticos nuevamente:
+
+```{r}
+lax_pass_fc <- lax_pass_fit |> 
+  forecast(h = "2 years")
+
+p <- lax_pass_fc |> 
+  ggplot(aes(x = month, y = .mean)) +
+  geom_line(data = lax_passengers, aes(y = passengers)) +
+  geom_line(aes(color = .model)) +
+  facet_wrap(~ type, scales = "free_y", ncol = 1)
+
+plotly::ggplotly(p, dynamicTicks = TRUE) |> 
+  plotly::rangeslider()
+```
 
