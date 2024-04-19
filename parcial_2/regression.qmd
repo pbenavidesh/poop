@@ -1,6 +1,9 @@
 ---
 title: "Regression"
-format: html
+format: 
+  html:
+    toc: true
+    embed-resources: true
 ---
 
 ```{r}
@@ -44,7 +47,9 @@ $$
 
 ```{r}
 us_change |> 
-  model( reglin = TSLM(Consumption ~ Income)) |> 
+  model( reglin = ARIMA(Consumption ~ Income)) |> 
+  # report()
+  gg_tsresiduals()
   augment() |> 
   gg_tsdisplay(.innov, plot_type = "partial")
 ```
@@ -89,4 +94,10 @@ fit <- vic_elec_daily %>%
 
 report(fit)
 ```
+
+```{r}
+fit |> 
+  gg_tsresiduals()
+```
+
 

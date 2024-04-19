@@ -1,6 +1,9 @@
 ---
 title: "Prophet"
-format: html
+format: 
+  html:
+    toc: true
+    embed-resources: true
 ---
 
 ```{r}
@@ -84,7 +87,7 @@ lax_pass_fc |>
 p <- lax_pass_fc |> 
   ggplot(aes(x = month, y = .mean)) +
   geom_line(data = lax_passengers, aes(y = passengers)) +
-  geom_line(aes(color = .model)) +
+  geom_line(aes(color = .model), alpha = 0.5) +
   facet_wrap(~ type, scales = "free_y", ncol = 1)
 
 plotly::ggplotly(p, dynamicTicks = TRUE) |> 
@@ -108,7 +111,7 @@ lax_pass_fc <- lax_pass_fit |>
 p <- lax_pass_fc |> 
   ggplot(aes(x = month, y = .mean)) +
   geom_line(data = lax_passengers, aes(y = passengers)) +
-  geom_line(aes(color = .model)) +
+  geom_line(aes(color = .model), alpha = 0.5) +
   facet_wrap(~ type, scales = "free_y", ncol = 1)
 
 plotly::ggplotly(p, dynamicTicks = TRUE) |> 
@@ -148,5 +151,82 @@ lax_pass_fc |>
 
 ```{r}
 lax_pass_fc |> hilo()
+```
+
+```{r}
+lax_pass_train |> 
+  features(passengers, features = guerrero)
+```
+
+## Con logaritmos
+
+```{r}
+lax_pass_train |> 
+  autoplot(passengers)
+lax_pass_train |> 
+  autoplot(log(passengers))
+```
+
+```{r}
+tictoc::tic()
+lax_pass_fit2 <- lax_pass_train |> 
+  model(
+    snaive = SNAIVE(log(passengers)),
+    snaive_drift = decomposition_model(
+      STL(log(passengers), robust = TRUE),
+      RW(season_adjust ~ drift())
+    ),
+    ets = ETS(log(passengers)),
+    sarima = ARIMA(log(passengers)),
+    reg_lin = TSLM(log(passengers) ~ season() + trend()),
+    reg_x_partes = TSLM(log(passengers)~ season() + trend(knots = as.Date("2010-01-01"))),
+    harmonic = ARIMA(log(passengers) ~ fourier(K = 4) + PDQ(0,0,0)),
+    prophet = prophet(log(passengers) ~ growth("linear") + season("year", type = "multiplicative")),
+    prophet_auto = prophet(log(passengers))
+  )
+tictoc::toc()
+lax_pass_fit2
+```
+```{r}
+lax_pass_fc2 <- lax_pass_fit2 |> 
+  forecast(h = "2 years")
+
+lax_pass_fc2 |> 
+  autoplot(lax_passengers |> filter_index("2014 Jan." ~ .), level = NULL)
+
+p <- lax_pass_fc2 |> 
+  ggplot(aes(x = month, y = .mean)) +
+  geom_line(data = lax_passengers, aes(y = passengers)) +
+  geom_line(aes(color = .model), alpha = 0.5) +
+  facet_wrap(~ type, scales = "free_y", ncol = 1)
+
+plotly::ggplotly(p, dynamicTicks = TRUE) |> 
+  plotly::rangeslider()
+
+lax_pass_fc2 |> 
+  accuracy(lax_passengers)
+```
+
+```{r}
+lax_pass_fit2 <- lax_pass_fit2 |> 
+  mutate(combinado = (prophet + harmonic + ets + sarima + snaive_drift)/5) |> 
+  select(-c(prophet_auto, snaive, reg_lin, reg_x_partes))
+
+lax_pass_fc2 <- lax_pass_fit2 |> 
+  forecast(h = "2 years")
+
+p <- lax_pass_fc2 |> 
+  ggplot(aes(x = month, y = .mean)) +
+  geom_line(data = lax_passengers, aes(y = passengers)) +
+  geom_line(aes(color = .model), alpha = 0.5) +
+  facet_wrap(~ type, scales = "free_y", ncol = 1)
+
+plotly::ggplotly(p, dynamicTicks = TRUE) |> 
+  plotly::rangeslider()
+
+lax_pass_fc2 |> 
+  accuracy(lax_passengers) |> 
+  arrange(type, MAPE) |> 
+  select(type, .model, .type, MAPE, MASE, MAE, RMSE)
 ```
 

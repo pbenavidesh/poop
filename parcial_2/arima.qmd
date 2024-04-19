@@ -30,6 +30,19 @@ us_change |>
 `ndiffs` nos dice 0. Por lo tanto, no se requieren diferencias y el orden **d** de nuestro modelo ARIMA sería 0; $d = 0$.
 
 ```{r}
+us_change |> 
+  gg_tsdisplay(Consumption, plot_type = "partial")
+```
+
+$$
+ARIMA(3,0,3)\\
+ARIMA(3,0,4)
+$$
+
+
+```{r}
+#| warning: false
+
 google_stock <- gafa_stock %>%
   filter(Symbol == "GOOG") %>%
   mutate(day = row_number()) %>%
@@ -39,12 +52,21 @@ google_stock <- gafa_stock %>%
 google_2015 <- google_stock %>% filter(year(Date) == 2015)
 
 google_2015 |> 
+  features(Close, unitroot_ndiffs)
+
+google_2015 |> 
   autoplot(Close)
 
 google_2015 |> 
   gg_tsdisplay(Close, plot_type = "partial")
-```
 
+google_2015 |> 
+  gg_tsdisplay(Close |> difference(1), plot_type = "partial")
+```
+$$
+ARIMA(p = 0, d = 1, q = 0)\\
+ARIMA(0,1,0): y_t' = \varepsilon_t
+$$
 
 Para encontrar el orden $p$ y $q$, vamos a utilizar las funciones de autocorrelación (**ACF**) y autocorrelación parcial (**PACF**):
 
@@ -104,6 +126,15 @@ us_change_fit |>
 
 LA forma tradicional de elegir el orden p y q de un modelo ARIMA es a través de los criterios de información (AIC, AICc, BIC):
 
+```{r}
+tictoc::tic()
+us_change |> 
+  model(
+    arima = ARIMA(Consumption ~ pdq(p = 1:3, d = 0, q = 0:2) + PDQ(0,0,0))
+  )
+tictoc::toc()
+```
+
 
 ```{r}
 us_change_fit |> 
@@ -137,6 +168,14 @@ us_change_fit |>
   select(arima_001) |> 
   gg_tsresiduals()
 ```
+```{r}
+us_change |> 
+  model(
+    ets = ETS(Consumption) 
+  )
+```
+
+
 
 ```{r}
 us_change_fit |> 
@@ -176,5 +215,96 @@ tictoc::toc()
 
 ```{r}
 1:3
+```
+
+
+## SARIMA
+
+```{r}
+eu_retail <- as_tsibble(fpp2::euretail)
+eu_retail %>% autoplot(value) + ylab("Retail index") + xlab("Year")
+
+eu_retail |> 
+  model(stl = STL(value, robust = TRUE)) |> 
+  components() |> 
+  autoplot()
+```
+
+```{r}
+eu_retail |> 
+  features(value, unitroot_nsdiffs)
+```
+
+Diferencias estacionales:
+
+$$
+y_t - y_{t-m}\\
+y_t - y_{t-4}
+$$
+
+```{r}
+eu_retail |> 
+  autoplot(value |> difference(4))
+```
+
+```{r}
+eu_retail |> 
+  features(value |> difference(4), unitroot_ndiffs)
+```
+
+```{r}
+#| warning: false
+
+eu_retail |> 
+  autoplot(value |> difference(4) |> difference(1))
+
+eu_retail |> 
+  gg_tsdisplay(value |> difference(4) |> difference(1), plot_type = "partial")
+```
+$$
+ARIMA(p = 1, d = 1, q = 1) (P = 1, D = 1, Q = 1)_4\\
+ARIMA(1,1,1)(1,1,1)_4
+$$
+
+
+```{r}
+eu_fit <- eu_retail |> 
+  model(
+    arima_111_111 = ARIMA(value ~ pdq(1,1,1) + PDQ(1,1,1)),
+    arima_112_111 = ARIMA(value ~ pdq(1,1,2) + PDQ(1,1,1)),
+    arima_110_111 = ARIMA(value ~ pdq(1,1,0) + PDQ(1,1,1)),
+    arima_011_111 = ARIMA(value ~ pdq(0,1,1) + PDQ(1,1,1)),
+    arima_011_110 = ARIMA(value ~ pdq(1,1,0) + PDQ(1,1,0)),
+    arima_auto    = ARIMA(log(value))
+  )
+
+eu_fit
+
+eu_fit |> 
+  glance() |> 
+  arrange(AICc)
+```
+
+```{r}
+eu_retail |> 
+  autoplot(log(value) |> difference(4) |> difference(1))
+```
+
+
+
+```{r}
+eu_fit |> 
+  select(arima_auto) |> 
+  gg_tsresiduals()
+
+eu_fit |> 
+  augment() |> 
+  features(.innov, ljung_box)
+```
+
+```{r}
+eu_fit |> 
+  accuracy() |> 
+  arrange(RMSE)
 ```
 
