@@ -1,0 +1,176 @@
+---
+title: "Outliers y observaciones faltantes"
+format: 
+  revealjs:
+    embed-resources: true
+    df-print: paged
+    transition: slide
+    scrollable: true
+    code-overflow: wrap
+    code-fold: true
+    code-link: true
+    link-external-newwindow: true
+    theme: beige
+    highlight-style: atom-one
+---
+
+## Paqueterías
+
+Las paqueterías para el análisis son:
+
+```{r}
+#| message: false
+#| warning: false
+#| echo: fenced
+library(tidyverse)
+library(fpp3)
+library(plotly)
+```
+
+```{r}
+trips <- tourism |>
+  filter(
+    Region == "Adelaide Hills", 
+    Purpose == "Visiting"
+  ) 
+
+trips |>
+  autoplot(Trips) +
+  labs(title = "Quarterly overnight trips to Adelaide Hills",
+       y = "Number of trips")
+```
+
+## STL
+
+Descomponemos la serie para evaluar si hay outliers en el componente residual.
+
+```{r}
+trips_dcmp <- trips |> 
+  model(
+    stl = STL(Trips ~ season(period = 1), 
+              robust = TRUE)
+  ) |> 
+  components()
+
+p <- trips_dcmp |> 
+  autoplot()
+
+ggplotly(p)
+```
+
+## Valores atípicos
+
+```{r}
+#| echo: true
+atipicos <- trips_dcmp |> 
+  filter(
+    remainder < quantile(remainder, 0.25) - 1.5 * IQR(remainder) | 
+      remainder > quantile(remainder, 0.75) + 1.5 * IQR(remainder)
+  )
+atipicos
+```
+
+Se encontró `r nrow(atipicos)` valor(es) atípico(s).
+
+
+```{r}
+trips_sin_outliers <- trips |> 
+  anti_join(atipicos) |> 
+  fill_gaps()
+trips_sin_outliers
+```
+
+
+
+```{r}
+trips_fill <- trips_sin_outliers |> 
+  model(ARIMA(Trips)) |> 
+  interpolate(trips_sin_outliers)
+trips_fill
+```
+
+
+```{r}
+trips |> 
+  autoplot(Trips, size = 1, color = "grey", alpha = 0.5) +
+  autolayer(trips_fill, Trips, size = 1) +
+  autolayer(trips_fill |> filter_index("2002 Q3" ~ "2003 Q1"), Trips, color = "green", size = 1) +
+  autolayer(trips_fill |> filter_index("2012 Q4" ~ "2013 Q2"), Trips, color = "green", size = 1) +
+  autolayer(trips_fill |> filter_index("2016 Q1" ~ "2017 Q1"), Trips, color = "green", size = 1)
+```
+
+## Mantener los pronósticos positivos
+
+
+```{r}
+egg_prices <- prices |> filter(!is.na(eggs))
+egg_prices |>
+  model(ETS(eggs ~ trend("A"))) |>
+  forecast(h = 50) |>
+  autoplot(egg_prices) +
+  labs(title = "Annual egg prices",
+       y = "$US (in cents adjusted for inflation) ",
+       caption = "The forecasts go below zero! That doesn't make any sense") +
+  geom_hline(yintercept = 0, color = "firebrick")
+
+```
+
+```{r}
+egg_prices |>
+  model(ETS(log(eggs) ~ trend("A"))) |>
+  forecast(h = 100) |>
+  autoplot(egg_prices) +
+  labs(title = "Annual egg prices",
+       y = "$US (in cents adjusted for inflation) ",
+       caption = "Using a log transformation, we prevent the forecasts to go below zero.") +
+  geom_hline(yintercept = 0, color = "firebrick")
+```
+
+
+
+## Mantener los pronósticos dentro de cierto rango
+
+Transformación logit escalada
+
+$$
+y=\log \left(\frac{x-a}{b-x}\right)
+$$
+
+$$
+w = \log (x)\\
+w = \exp(\log(x)) = x
+$$
+
+
+Para dar "reversa" a la transformación, necesitamos:
+
+$$
+x=\frac{(b-a) e^y}{1+e^y}+a
+$$
+
+Lo ponemos en una función:
+
+```{r}
+scaled_logit <- function(x, lower = 0, upper = 1) {
+  log((x - lower) / (upper - x))
+}
+inv_scaled_logit <- function(x, lower = 0, upper = 1) {
+  (upper - lower) * exp(x) / (1 + exp(x)) + lower
+}
+my_scaled_logit <- new_transformation(
+                    scaled_logit, inv_scaled_logit)
+```
+
+
+```{r}
+egg_prices |>
+  model(
+    ETS(my_scaled_logit(eggs, lower = 50, upper = 400)
+          ~ trend("A"))
+  ) |>
+  forecast(h = 50) |>
+  autoplot(egg_prices) +
+  labs(title = "Annual egg prices",
+       y = "$US (in cents adjusted for inflation) ") +
+  geom_hline(yintercept = 50, color = "firebrick", linetype = "dashed")
+```
