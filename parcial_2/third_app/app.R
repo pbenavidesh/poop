@@ -9,7 +9,7 @@ library(tidyverse)
 # UI ----------------------------------------------------------------------
 
 ui <- fluidPage(
-  theme = bs_theme(bootswatch = "minty"),
+  theme = bs_theme(bootswatch = "quartz"),
   titlePanel("Descarga y modelado de datos"),
   sidebarLayout(
 

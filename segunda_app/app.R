@@ -19,7 +19,8 @@ library(bslib)
 
 ui <- fluidPage(
   shinythemes::themeSelector(),
-  # theme = bootstrapLib(bs_theme()),
+  # theme =  shinythemes::shinytheme("cerulean"),
+  # theme = bs_theme(bootswatch = "quartz"),
   navbarPage(
       title = "Descarga y visualización de datos",
 
