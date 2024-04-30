@@ -1,0 +1,133 @@
+---
+title: "Presentación con Shiny"
+format: 
+  revealjs:
+    theme: beige
+    scrollable: true
+server: shiny
+---
+
+# Introducción
+
+
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished presentation. To learn more about Quarto presentations see <https://quarto.org/docs/presentations/>.
+
+## Bullets
+
+When you click the **Render** button a document will be generated that includes:
+
+-   Content authored with markdown
+-   Output from executable code
+
+## Code
+
+When you click the **Render** button a presentation will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+1 + 1
+```
+
+## Código y resultado
+
+```{r}
+#| echo: true
+1 + 1
+```
+
+## Columnas
+
+:::: {.columns}
+
+::: {.column width="40%"}
+
+```{r}
+ 1 + 1
+```
+
+
+:::
+
+::: {.column width="60%"}
+```{r}
+#| echo: true
+
+2 + 2
+
+runif(500)
+
+runif(100)
+```
+:::
+
+::::
+
+## Slide con fondo azul {background-color="dodgerblue"}
+
+Fondo azul
+
+# Shiny en una presentación
+
+## App setup
+
+```{r}
+#| context: setup
+#| message: false
+#| warning: false
+#| echo: true
+
+library(tidyverse)
+library(fpp3)
+library(shiny)
+library(plotly)
+
+animales <- aus_livestock |> 
+  distinct(Animal) |> 
+  pull()
+
+estados <- aus_livestock |> 
+  distinct(State) |> 
+  pull()
+```
+
+
+## Visualización
+
+```{r}
+checkboxGroupInput(
+    inputId = "animal",
+    label = "Selecciona el/los animale(s) a visualizar", 
+    choices = animales,
+    inline = TRUE
+)
+
+checkboxGroupInput(
+    inputId = "estado",
+    label = "Selecciona el/los estado(s) a considerar", 
+    choices = estados,
+    inline = TRUE
+)
+```
+
+Aquí está la gráfica:
+
+
+```{r}
+plotlyOutput(outputId = "grafica")
+```
+
+```{r}
+#| context: server
+
+output$grafica <- renderPlotly({
+  aus_livestock |> 
+    filter(
+      Animal %in% input$animal,
+      State %in% input$estado
+    ) |> 
+    autoplot(Count)
+})
+```
+
