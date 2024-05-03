@@ -1,0 +1,148 @@
+---
+title: "Proyecto final Series de tiempo"
+subtitle: "Equipo "
+author: "integrantes del equipo"
+format: 
+  revealjs:
+    smaller: true
+    scrollable: true
+    theme: solarized
+    slide-number: true
+    transition: slide
+    embed-resources: true
+---
+
+## pkgs
+
+```{r}
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(fpp3)
+```
+
+## Datos
+
+### Importación
+
+```{r}
+train <- read_csv("train.csv")
+train
+```
+## tsibble
+
+
+```{r}
+train_tsbl <- train |> 
+  as_tsibble(index = date, key = c(store_nbr, family)) 
+
+train_tsbl
+```
+## Check gaps
+
+```{r}
+train_tsbl |> 
+  has_gaps() |> 
+  filter(.gaps == FALSE)
+```
+
+```{r}
+cerrado <- train_tsbl |> 
+  count_gaps(.full = TRUE) |> 
+  distinct(.from)
+
+cerrado
+```
+
+```{r}
+train_tsbl <- train_tsbl |> 
+  fill_gaps(.full = TRUE, 
+            sales = 0L, 
+            onpromotion = 0L)
+
+train_tsbl
+```
+## Gráfica
+
+
+```{r}
+train_tsbl |> 
+  autoplot(sales, alpha = 0.3) + 
+  theme(legend.position = "none") +
+  facet_grid(family ~ store_n)
+```
+
+
+## Chunks mostrando y ocultando código
+
+:::: {.columns}
+
+::: {.column width="50%"}
+Sin mostrar el código
+
+```{r}
+1 + 1
+```
+
+:::
+
+::: {.column width="50%"}
+Mostrando el código
+
+```{r}
+#| echo: true
+
+2 + 2
+```
+
+:::
+
+::::
+
+
+## modelo benchmark
+
+```{r}
+#| echo: true
+
+tictoc::tic()
+fit <- train_tsbl |> 
+  model(
+    snaive = SNAIVE(sales)
+  )
+tictoc::toc()
+fit
+```
+
+
+
+```{r}
+tictoc::tic()
+fcst <- fit |> 
+  forecast(h = 16)
+  # forecast(new_data = ) # para modelos que incluyan predictoras exógenas (regresión, etc.)
+tictoc::toc()
+
+fcst
+```
+
+## Kaggle
+
+```{r}
+test <- read_csv("test.csv")
+test
+```
+
+```{r}
+submission <- fcst |> 
+  left_join(test, by = c("date", "store_nbr", "family")) |> 
+  as_tibble() |> 
+  select(id, .mean) |> 
+  rename(sales = .mean)
+submission
+
+submission |> 
+  write_csv("submission.csv")
+```
+
